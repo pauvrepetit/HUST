@@ -1,0 +1,54 @@
+	;有符号十进制转换为字类型的二进制数F10T2
+               ;入口参数：输入串首址在SI中，串长在CX中
+               ;出口参数：(SI)=-1表示出错，转换结果在AX中。
+.386
+PUBLIC F10T2
+extrn SIGN:BYTE, DAT:WORD
+
+CODE SEGMENT USE16 PARA PUBLIC 'CODE'
+	ASSUME CS:CODE
+F10T2 PROC FAR
+	PUSH DX
+	PUSH BX
+	MOV AX,0
+	MOV SIGN,0
+	MOV BL,[SI]
+	CMP BL,'+'
+	JZ  A
+	CMP BL,'-'
+	JNE NEXT2
+	MOV SIGN,1
+A:
+	DEC CX
+	JZ ERR
+NEXT1:
+	INC SI
+	MOV BL,[SI]
+NEXT2:
+	CMP BL,'0'
+	JB ERR
+	CMP BL,'9'
+	JA ERR
+	SUB BL,30H
+	MOV BH,0
+	MUL DAT
+	JO ERR
+	ADD AX,BX
+	JC ERR
+	
+	DEC CX
+	JNZ NEXT1
+	CMP SIGN,1
+	JNE QQ
+	NEG AX
+
+QQ:
+	POP BX
+	POP DX
+	RET
+ERR:
+	MOV SI,-1
+	JMP QQ
+F10T2	ENDP
+CODE ENDS
+ END
