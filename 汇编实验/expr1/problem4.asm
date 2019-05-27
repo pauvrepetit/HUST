@@ -172,20 +172,30 @@ authOK:
 	jmp start
 
 authNotOK:
-	mov al, [bx + 12]
-	mov cl, 128
-	mul cl
+
+
+	mov ax, [bx + 12]
+	mov cx, 1280
+	mul cx
+	push dx
 	push ax
-	mov al, [bx + 14]
+	mov al, byte ptr [bx + 14]
 	mov cl, [bx + 11]
 	mul cl
-	mov cl, 10
-	div cl
-	mov ah, 0
+	mov cx, ax
+	pop ax
+	pop dx
+	div cx
+	push ax
+
+	mov ax, [bx + 18]
+	mov cx, 64
+	mul cx
+	mov cx, [bx + 16]
+	div cx
 	mov dx, ax
 	pop ax
-	div dl
-	mov ah, 0
+	add ax, dx
 	jmp func4
 
 printNotFound:

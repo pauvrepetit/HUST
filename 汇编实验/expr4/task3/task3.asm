@@ -1,6 +1,21 @@
 .386
+
+putnum MACRO
+    local large, endputnum
+    mov ah, 2
+    cmp dl, 9
+    ja large
+    add dl, '0'
+    jmp endputnum
+large:
+    add dl, 'A'
+    sub dl, 10
+endputnum:
+    int 21h
+ENDM
+
 data segment use16
-    CMOSaddr db 2
+    CMOSaddr db 2        ; 修改此处的值以指定待读取的CMOS单元地址
 data ends
 
 stack segment use16 stack
@@ -18,18 +33,14 @@ start:
     in al, 71h
     mov bl, al
 
-    mov ah, 2
     mov dl, bl
     shr dl, 4
-    add dl, '0'
-    int 21h
+    putnum
 
-    mov ah, 2
     mov dl, bl
     shl dl, 4
     shr dl, 4
-    add dl, '0'
-    int 21h
+    putnum
 
     mov ax, 4C00H
     int 21h
