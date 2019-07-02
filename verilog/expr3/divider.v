@@ -14,4 +14,4 @@ module divider(clk, clk_N);
         end
     end
 
-endmodule // divider ·ÖÆµÆ÷
+endmodule // divider
