@@ -1,1 +1,10 @@
+.vscode/
 .DS_Store
+.qmake.stash
+*.o
+*.user
+moc_*
+ui_*
+Makefile
+socket
+
