@@ -32,6 +32,7 @@ int sendKnownFile(int socket, char *filename, int type);
 int send404(int socket);
 int sendErrorData(int errorCode, int clientSocket);
 int outputConnInfo(struct sockaddr_in clientSockAddr, Widget *widget);
+void outputHTTPRequest(char *readBuffer, Widget *widget);
 
 //int error(int errorCode, QTextBrowser *log);
 // int error(int socket, int errorCode);

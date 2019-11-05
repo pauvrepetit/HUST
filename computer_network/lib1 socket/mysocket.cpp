@@ -3,6 +3,7 @@
 #include <iostream>
 #include <signal.h>
 #include <string>
+#include <curl/curl.h>
 
 using std::string;
 
@@ -209,6 +210,14 @@ int makeConnection(unsigned short port, unsigned int address,
     return 0;
 }
 
+void outputHTTPRequest(char *readBuffer, Widget *widget) {
+    QString threadNum;
+    threadNum.setNum(pthread_self());
+    QString HTTPRequest(readBuffer);
+    emit widget->sendMsg("ThreadID:" + threadNum + "\nHTTP请求：" + HTTPRequest);
+    return;
+}
+
 void *processClient(void *arg) {
     success(4, thisWidget); // 输出log 创建连接成功
     outputConnInfo(((struct clientArg *)arg)->clientSockAddr, thisWidget);
@@ -219,6 +228,9 @@ void *processClient(void *arg) {
     read(clientSocket, readBuffer, BUFFER_LENGTH - 1);
     // 从套接字clientSocket中读取最多BUFFER_LENGTH字节的数据到readBuffer中
     // 此处读取的应该为HTTP请求报文
+
+    outputHTTPRequest(readBuffer, thisWidget); // 输出HTTP请求报文
+
 
     if (!strstr(readBuffer, "HTTP/")) {
         // socket报文中不存在HTTP/子串，不是HTTP请求报文，返回错误
@@ -244,7 +256,12 @@ void *processClient(void *arg) {
         return NULL;
     }
 
-    int sendStatus = sendData(clientSocket, HTTPGetFilename); // 发送数据
+    CURL *c = curl_easy_init();
+    char *filenameTrans = curl_easy_unescape(c, HTTPGetFilename, 0, NULL);
+    // 将文件名转化为可识别的模式
+    curl_easy_cleanup(c);
+
+    int sendStatus = sendData(clientSocket, filenameTrans); // 发送数据
     // return 8 => 文件不存在
     // return 0 => 成功发送
     if (sendStatus != 0) {
@@ -253,6 +270,7 @@ void *processClient(void *arg) {
         success(9, thisWidget);
     }
 
+    curl_free(filenameTrans);
     free(readBufferBegin);
     success(10, thisWidget);
     return NULL;
@@ -324,9 +342,6 @@ int sendKnownFile(int socket, char *filename, int type) {
 
     string filenameStr(filename);
     string filePath = baseDir + filenameStr;
-
-    // std::cout << baseDir << std::endl;
-    // std::cout << filePath << std::endl;
 
     FILE *fp = fopen(filePath.c_str(), "r");
     char buffer[BUFFER_LENGTH];
