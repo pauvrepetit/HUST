@@ -1,9 +1,9 @@
 #include "mysocket.h"
 #include "func.h"
+#include <curl/curl.h>
 #include <iostream>
 #include <signal.h>
 #include <string>
-#include <curl/curl.h>
 
 using std::string;
 
@@ -214,7 +214,9 @@ void outputHTTPRequest(char *readBuffer, Widget *widget) {
     QString threadNum;
     threadNum.setNum(pthread_self());
     QString HTTPRequest(readBuffer);
-    emit widget->sendMsg("ThreadID:" + threadNum + "\nHTTP请求：" + HTTPRequest);
+    QStringList HTTPRequestList = HTTPRequest.split('\r');
+    emit widget->sendMsg("ThreadID:" + threadNum + " HTTP请求：" +
+                         HTTPRequestList[0]);
     return;
 }
 
@@ -229,8 +231,12 @@ void *processClient(void *arg) {
     // 从套接字clientSocket中读取最多BUFFER_LENGTH字节的数据到readBuffer中
     // 此处读取的应该为HTTP请求报文
 
-    outputHTTPRequest(readBuffer, thisWidget); // 输出HTTP请求报文
+    CURL *c = curl_easy_init();
+    char *HTTPRequestTrans = curl_easy_unescape(c, readBuffer, 0, NULL);
 
+    outputHTTPRequest(HTTPRequestTrans, thisWidget); // 输出HTTP请求报文
+
+    curl_free(HTTPRequestTrans);
 
     if (!strstr(readBuffer, "HTTP/")) {
         // socket报文中不存在HTTP/子串，不是HTTP请求报文，返回错误
@@ -256,7 +262,6 @@ void *processClient(void *arg) {
         return NULL;
     }
 
-    CURL *c = curl_easy_init();
     char *filenameTrans = curl_easy_unescape(c, HTTPGetFilename, 0, NULL);
     // 将文件名转化为可识别的模式
     curl_easy_cleanup(c);
@@ -296,6 +301,12 @@ int sendData(int socket, char *filename) {
     if (bufferFilename == NULL) {
         // 文件名中没有. 没有扩展名 当作未知文件类型处理
         free(bufferFilenameBegin);
+        if (strlen(filename) == 0) {
+            strcpy(filename, "index.html");
+        } // 如果没有提供文件名 默认index.html
+        else if (filename[strlen(filename) - 1] == '/') {
+            strcpy(filename + strlen(filename), "index.html");
+        }
         return sendKnownFile(socket, filename, 3);
     }
     // 此处将bufferFilename指针指向字符串中第一个.的后面一个位置，即扩展名的位置
