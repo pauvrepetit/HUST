@@ -1,6 +1,7 @@
 #include "mysocket.h"
 #include "func.h"
 #include <curl/curl.h>
+#include <fstream>
 #include <iostream>
 #include <signal.h>
 #include <string>
@@ -64,6 +65,7 @@ void *serverMain(void *argv) {
         arg.clientSocket = clientSocket;
         arg.clientSockAddr = clientSockAddr;
         pthread_create(&newThread, NULL, processClient, (void *)&arg);
+        pthread_detach(newThread);
     }
     return (void *)returnCode;
 }
@@ -221,64 +223,68 @@ void outputHTTPRequest(char *readBuffer, Widget *widget) {
 }
 
 void *processClient(void *arg) {
+    // pthread_detach(pthread_self());     // 使线程unjoinable 调用pthread_exit后回收资源
     success(4, thisWidget); // 输出log 创建连接成功
     outputConnInfo(((struct clientArg *)arg)->clientSockAddr, thisWidget);
     int clientSocket = ((struct clientArg *)arg)->clientSocket;
-    char *readBuffer = (char *)malloc(sizeof(char) * BUFFER_LENGTH);
-    char *readBufferBegin = readBuffer; // use this pointer to free memory
+    char readBuffer[BUFFER_LENGTH];
 
-    read(clientSocket, readBuffer, BUFFER_LENGTH - 1);
-    // 从套接字clientSocket中读取最多BUFFER_LENGTH字节的数据到readBuffer中
-    // 此处读取的应该为HTTP请求报文
+    while (1) {
 
-    CURL *c = curl_easy_init();
-    char *HTTPRequestTrans = curl_easy_unescape(c, readBuffer, 0, NULL);
+        if (read(clientSocket, readBuffer, BUFFER_LENGTH - 1) == 0) {
+            // socket关闭
+            close(clientSocket);
+            brokenPipe(13);
+        }
+        // 从套接字clientSocket中读取最多BUFFER_LENGTH字节的数据到readBuffer中
+        // 此处读取的应该为HTTP请求报文
 
-    outputHTTPRequest(HTTPRequestTrans, thisWidget); // 输出HTTP请求报文
+        CURL *c = curl_easy_init();
+        char *HTTPRequestTrans = curl_easy_unescape(c, readBuffer, 0, NULL);
 
-    curl_free(HTTPRequestTrans);
+        if (!strstr(readBuffer, "HTTP/")) {
+            // socket报文中不存在HTTP/子串，不是HTTP请求报文，返回错误
+            error(5, thisWidget);
+            sendErrorData(5, clientSocket);
+            // continue;
+            close(clientSocket);
+            brokenPipe(13);
+        }
 
-    if (!strstr(readBuffer, "HTTP/")) {
-        // socket报文中不存在HTTP/子串，不是HTTP请求报文，返回错误
-        error(5, thisWidget);
-        sendErrorData(5, clientSocket);
-        free(readBufferBegin);
-        success(10, thisWidget);
-        return NULL;
+        char HTTPMethod[METHOD_LENGTH];
+        char HTTPGetFilename[FILENAME_LENGTH];
+
+        char *readBufferTemp = readBuffer;
+
+        strcpy(HTTPMethod, strsep(&readBufferTemp, " /"));
+        strcpy(HTTPGetFilename, strsep(&readBufferTemp, " ") + 1);
+
+        if (strcmp(HTTPMethod, "GET") != 0) {
+            // HTTP method is not GET 返回错误
+            error(6, thisWidget);
+            sendErrorData(6, clientSocket);
+            continue;
+        }
+
+        outputHTTPRequest(HTTPRequestTrans, thisWidget); // 输出HTTP请求报文
+
+        curl_free(HTTPRequestTrans);
+
+        char *filenameTrans = curl_easy_unescape(c, HTTPGetFilename, 0, NULL);
+        // 将文件名转化为可识别的模式
+        curl_easy_cleanup(c);
+
+        int sendStatus = sendData(clientSocket, filenameTrans); // 发送数据
+        // return 8 => 文件不存在
+        // return 0 => 成功发送
+        if (sendStatus != 0) {
+            error(sendStatus, thisWidget);
+        } else {
+            success(9, thisWidget);
+        }
+
+        curl_free(filenameTrans);
     }
-
-    char HTTPMethod[METHOD_LENGTH];
-    char HTTPGetFilename[FILENAME_LENGTH];
-
-    strcpy(HTTPMethod, strsep(&readBuffer, " /"));
-    strcpy(HTTPGetFilename, strsep(&readBuffer, " ") + 1);
-
-    if (strcmp(HTTPMethod, "GET") != 0) {
-        // HTTP method is not GET 返回错误
-        error(6, thisWidget);
-        sendErrorData(6, clientSocket);
-        free(readBufferBegin);
-        success(10, thisWidget);
-        return NULL;
-    }
-
-    char *filenameTrans = curl_easy_unescape(c, HTTPGetFilename, 0, NULL);
-    // 将文件名转化为可识别的模式
-    curl_easy_cleanup(c);
-
-    int sendStatus = sendData(clientSocket, filenameTrans); // 发送数据
-    // return 8 => 文件不存在
-    // return 0 => 成功发送
-    if (sendStatus != 0) {
-        error(sendStatus, thisWidget);
-    } else {
-        success(9, thisWidget);
-    }
-
-    curl_free(filenameTrans);
-    free(readBufferBegin);
-    success(10, thisWidget);
-    return NULL;
 }
 
 int outputConnInfo(struct sockaddr_in clientSockAddr, Widget *widget) {
@@ -293,14 +299,13 @@ int outputConnInfo(struct sockaddr_in clientSockAddr, Widget *widget) {
 }
 
 int sendData(int socket, char *filename) {
-    char *bufferFilename = (char *)malloc(sizeof(char) * FILENAME_LENGTH);
-    char *bufferFilenameBegin = bufferFilename; // for free
+    char bufferFilename[FILENAME_LENGTH];
+    char *tempBufferFilename = bufferFilename;
     strcpy(bufferFilename, filename);
 
-    strsep(&bufferFilename, ".");
-    if (bufferFilename == NULL) {
+    strsep(&tempBufferFilename, ".");
+    if (tempBufferFilename == NULL) {
         // 文件名中没有. 没有扩展名 当作未知文件类型处理
-        free(bufferFilenameBegin);
         if (strlen(filename) == 0) {
             strcpy(filename, "index.html");
         } // 如果没有提供文件名 默认index.html
@@ -311,21 +316,17 @@ int sendData(int socket, char *filename) {
     }
     // 此处将bufferFilename指针指向字符串中第一个.的后面一个位置，即扩展名的位置
 
-    if (strcmp(bufferFilename, "html") == 0) {
+    if (strcmp(tempBufferFilename, "html") == 0) {
         // get html file
-        free(bufferFilenameBegin); //  事实上到这里bufferFilename数组就用不上了
         return sendKnownFile(socket, filename, 0);
-    } else if (strcmp(bufferFilename, "png") == 0) {
+    } else if (strcmp(tempBufferFilename, "png") == 0) {
         // get png image
-        free(bufferFilenameBegin);
         return sendKnownFile(socket, filename, 1);
-    } else if (strcmp(bufferFilename, "mp4") == 0) {
+    } else if (strcmp(tempBufferFilename, "mp4") == 0) {
         // get mp4 video
-        free(bufferFilenameBegin);
         return sendKnownFile(socket, filename, 2);
     } else {
         // 未知的文件类型 发送文件
-        free(bufferFilenameBegin);
         return sendKnownFile(socket, filename, 3);
     }
 }
@@ -338,21 +339,27 @@ int sendKnownFile(int socket, char *filename, int type) {
     string header;
     switch (type) {
     case 0:
-        header = "Content-Type: text/html\r\n\r\n";
+        header = "Content-Type: text/html\r\n";
         break;
     case 1:
-        header = "Content-Type: image/png\r\n\r\n";
+        header = "Content-Type: image/png\r\n";
         break;
     case 2:
-        header = "Context-Type: video/mpeg4\r\n\r\n";
+        header = "Context-Type: video/mpeg4\r\n";
         break;
     case 3:
-        header = "Context-Type: application/octet-stream\r\n\r\n";
+        header = "Context-Type: application/octet-stream\r\n";
         break;
     }
 
     string filenameStr(filename);
     string filePath = baseDir + filenameStr;
+
+    std::ifstream fs(filePath, std::fstream::ate | std::fstream::binary);
+    int fileLength = fs.tellg();
+    fs.close();
+
+    header += ("Content-Length: " + std::to_string(fileLength) + "\r\n\r\n");
 
     FILE *fp = fopen(filePath.c_str(), "r");
     char buffer[BUFFER_LENGTH];
@@ -373,22 +380,22 @@ int sendKnownFile(int socket, char *filename, int type) {
         write(socket, buffer, readLen);
         // 至此，将整个文件读取完成，并写入到socket中
         fclose(fp);
-        close(socket);
+        // close(socket);
         return 0;
     }
 }
 
 int send404(int socket) {
     string status = "HTTP/1.1 404 Not Found\r\n";
-    string header = "Content-Type: text/html\r\n\r\n";
+    string header = "Content-Type: text/html\r\nContent-Length: 87\r\n\r\n";
     string body = "<html><head><title>404 Not Found</title></head><body><p>404 "
-                  "Not Found\r\n</p></body></html>";
+                  "Not Found</p></body></html>";
 
     write(socket, status.c_str(), status.length());
     write(socket, header.c_str(), header.length());
     write(socket, body.c_str(), body.length());
 
-    close(socket);
+    // close(socket);
     return 0;
 }
 
@@ -414,6 +421,6 @@ int sendErrorData(int errorCode, int clientSocket) {
     write(clientSocket, status.c_str(), status.length());
     write(clientSocket, header.c_str(), header.length());
     write(clientSocket, body.c_str(), body.length());
-    close(clientSocket);
+    // close(clientSocket);
     return 0;
 }
