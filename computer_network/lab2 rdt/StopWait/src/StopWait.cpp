@@ -13,10 +13,10 @@
 
 int main(int argc, char* argv[])
 {
-	RdtSender *ps = new StopWaitRdtSender();
-	RdtReceiver * pr = new StopWaitRdtReceiver();
-	// RdtSender *ps = new GBNRdtSender();
-	// RdtReceiver *pr = new GBNRdtReceiver();
+	// RdtSender *ps = new StopWaitRdtSender();
+	// RdtReceiver * pr = new StopWaitRdtReceiver();
+	RdtSender *ps = new GBNRdtSender();
+	RdtReceiver *pr = new GBNRdtReceiver();
 	pns->setRunMode(0);  //VERBOS模式
 //	pns->setRunMode(1);  //安静模式
 	pns->init();
