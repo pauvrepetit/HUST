@@ -13,6 +13,7 @@ Widget::Widget(QWidget *parent) : QWidget(parent), ui(new Ui::Widget) {
     ui->setupUi(this);
 
     ui->stopButton->setEnabled(false);
+    // ui->log->document()->setMaximumBlockCount(1000);
 
     // set tab 切换顺序
     setTabOrder(ui->portNum, ui->maxConnNum);
@@ -63,6 +64,10 @@ void Widget::on_stopButton_clicked()
 
 void Widget::showMsg(QString msg) {
     ui->log->append(msg);
+    if(ui->log->toPlainText().count() > 10000) {
+        ui->log->clear();
+    }
+    // 每10000个字符自动清空
 }
 
 void Widget::on_clearLogButton_clicked() {
