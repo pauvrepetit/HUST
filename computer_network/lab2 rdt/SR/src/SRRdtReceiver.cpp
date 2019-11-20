@@ -54,10 +54,14 @@ void SRRdtReceiver::receive(const Packet &packet) {
                     windowBase++;
                     windowBase %= (SEQ_MAX + 1);
                 }
-                cout << RED << "接受方向上层提交数据 当前窗口开始位置为 "
-                     << windowBase << endl
-                     << RESET;
             }
+            cout << RED << "接受方向上层提交数据 当前窗口开始位置为 "
+                 << windowBase << "当前窗口中数据缓存情况为";
+            for (int i = 0; i < WINDOW_LENGTH; i++) {
+                cout << " ";
+                cout << -receivePacket[(i + windowBase) % (SEQ_MAX + 1)].acknum;
+            }
+            cout << endl << RESET;
         }
     } else {
         pUtils->printPacket("接收方接受报文校验错误", packet);
