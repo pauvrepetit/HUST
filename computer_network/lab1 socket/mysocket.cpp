@@ -64,8 +64,9 @@ void *serverMain(void *argv) {
         struct clientArg arg;
         arg.clientSocket = clientSocket;
         arg.clientSockAddr = clientSockAddr;
-        pthread_create(&newThread, NULL, processClient, (void *)&arg);
-        pthread_detach(newThread);
+        if (pthread_create(&newThread, NULL, processClient, (void *)&arg) == 0) {
+            pthread_detach(newThread);
+        }
     }
     return (void *)returnCode;
 }
@@ -223,7 +224,8 @@ void outputHTTPRequest(char *readBuffer, Widget *widget) {
 }
 
 void *processClient(void *arg) {
-    // pthread_detach(pthread_self());     // 使线程unjoinable 调用pthread_exit后回收资源
+    // pthread_detach(pthread_self());     // 使线程unjoinable
+    // 调用pthread_exit后回收资源
     success(4, thisWidget); // 输出log 创建连接成功
     outputConnInfo(((struct clientArg *)arg)->clientSockAddr, thisWidget);
     int clientSocket = ((struct clientArg *)arg)->clientSocket;
