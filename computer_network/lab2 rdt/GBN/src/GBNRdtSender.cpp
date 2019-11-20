@@ -91,6 +91,7 @@ void GBNRdtSender::timeoutHandler(int seqNum) {
     pns->stopTimer(SENDER, 0);
     pns->startTimer(SENDER, Configuration::TIME_OUT, 0);
     for (int i = 0; i < countPackage; i++) {
+        pUtils->printPacket("重发窗口中的包", sendPackage[(i + windowBase) % (SEQ_MAX + 1)]);
         pns->sendToNetworkLayer(RECEIVER,
                                 sendPackage[(i + windowBase) % (SEQ_MAX + 1)]);
         // 发送窗口中的包
