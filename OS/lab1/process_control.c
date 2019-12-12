@@ -21,10 +21,12 @@ void sig_func(int sig_no) {
         close(pipefd[1]);
         printf("Child Process 1 is Killed by Parent!\n");
         exit(0);
-    } else {
+    } else if (sig_no == SIGUSR2) {
         close(pipefd[0]);
         printf("Child Process 2 is Killed by Parent!\n");
         exit(0);
+    } else {
+        printf("unknown signal\n");
     }
 }
 
