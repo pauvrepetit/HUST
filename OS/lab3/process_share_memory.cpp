@@ -9,10 +9,11 @@
 #include <unistd.h>
 
 #define SHM_LEN 10000
-#define SHM_NUM 100
+#define SHM_NUM 5
 #define INIT_SEM SHM_NUM
 #define INPUT_FILE ("input.txt")
 #define OUTPUT_FILE ("output.txt")
+// #define INPUT_FILE ("/mnt/ramfs/output.txt")
 
 struct buffer {
     int len;
@@ -137,6 +138,7 @@ int main(void) {
         } else {
             // write process
             printf("writebuf::process started\n");
+            begin_clock = clock();
 
             // char *writeBuffer[SHM_NUM];
             struct buffer *writeBuffer[SHM_NUM];
@@ -182,6 +184,7 @@ int main(void) {
     } else {
         // read process
         printf("readbuf::process started\n");
+        begin_clock = clock();
         struct buffer *readBuffer[SHM_NUM];
         // char *readBuffer[SHM_NUM];
         // attach共享内存
