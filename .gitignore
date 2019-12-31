@@ -11,4 +11,6 @@ CMakeFiles/
 cmake_install.cmake
 CMakeCache.txt
 result.txt
+input.txt
+output.txt
 
