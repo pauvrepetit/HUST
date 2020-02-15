@@ -13,6 +13,5 @@ CMakeCache.txt
 result.txt
 input.txt
 output.txt
-linux-*/
 linux-*.tar.xz
 
