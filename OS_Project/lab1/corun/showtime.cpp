@@ -1,22 +1,20 @@
 #include "showtime.h"
 #include "ui_showtime.h"
+#include <QTimer>
 
 ShowTime::ShowTime(QWidget *parent) : QDialog(parent), ui(new Ui::ShowTime) {
     ui->setupUi(this);
-    connect(this, SIGNAL(clockSig()), this, SLOT(printTime()));
+    ui->Time->setEnabled(false);
+    ui->Time->setDateTime(QDateTime::currentDateTime());
+
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(printTime()));
+    timer->start(1000);
 }
 
 ShowTime::~ShowTime() { delete ui; }
 
 void ShowTime::printTime() {
-    time_t nowTime = time(NULL);
-    char *time_str = ctime(&nowTime);
-    int i = 0;
-    while (time_str[i] != '\n') {
-        i++;
-    }
-    time_str[i] = '\0';
-    QString qs(time_str);
-    ui->textBrowser->append(qs);
+    ui->Time->setDateTime(QDateTime::currentDateTime());
     return;
 }

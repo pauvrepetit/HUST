@@ -14,9 +14,6 @@ class ShowAddCount : public QDialog {
     explicit ShowAddCount(QWidget *parent = nullptr);
     ~ShowAddCount();
 
-  signals:
-    void clockSig();
-
   private slots:
     void printCount();
 

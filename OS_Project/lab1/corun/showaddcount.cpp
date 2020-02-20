@@ -1,12 +1,16 @@
 #include "showaddcount.h"
 #include "ui_showaddcount.h"
+#include <QTimer>
 
 ShowAddCount::ShowAddCount(QWidget *parent)
     : QDialog(parent), ui(new Ui::ShowAddCount) {
     ui->setupUi(this);
     this->clockCount = 0;
     this->sum = 0;
-    connect(this, SIGNAL(clockSig()), this, SLOT(printCount()));
+
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(printCount()));
+    timer->start(100);
 }
 
 ShowAddCount::~ShowAddCount() { delete ui; }

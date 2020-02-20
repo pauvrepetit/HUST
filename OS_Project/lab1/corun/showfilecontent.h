@@ -15,9 +15,6 @@ class ShowFileContent : public QDialog {
     explicit ShowFileContent(QWidget *parent = nullptr);
     ~ShowFileContent();
 
-  signals:
-    void clockSig();
-
   private slots:
     void printFile();
 

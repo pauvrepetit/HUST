@@ -14,9 +14,6 @@ class ShowTime : public QDialog {
     explicit ShowTime(QWidget *parent = nullptr);
     ~ShowTime();
 
-  signals:
-    void clockSig();
-
 private slots:
     void printTime();
 

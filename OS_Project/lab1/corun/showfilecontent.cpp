@@ -1,11 +1,15 @@
 #include "showfilecontent.h"
 #include "ui_showfilecontent.h"
+#include <QTimer>
 
 ShowFileContent::ShowFileContent(QWidget *parent)
     : QDialog(parent), ui(new Ui::ShowFileContent) {
     ui->setupUi(this);
     fp.open("/etc/fstab", std::ios::in);
-    connect(this, SIGNAL(clockSig()), this, SLOT(printFile()));
+
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(printFile()));
+    timer->start(1000);
 }
 
 ShowFileContent::~ShowFileContent() {
