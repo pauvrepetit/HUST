@@ -9,13 +9,13 @@
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <asm/uaccess.h>        // warning: 该头文件依赖于上面的某一个头文件，头文件引用顺序不能修改
+#include <asm/uaccess.h> // warning: 该头文件依赖于上面的某一个头文件，头文件引用顺序不能修改
+
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Hu Ao");
 MODULE_DESCRIPTION("This is huao_driver");
 MODULE_SUPPORTED_DEVICE("huao_device");
-
 
 static int huao_driver_init(void);
 static void huao_driver_exit(void);
@@ -26,8 +26,9 @@ static ssize_t huao_write(struct file *, const char *, size_t, loff_t *);
 
 static int major;           // 主设备号
 static int device_open = 0; // 设备的打开状态
-static char msg[81];
-static char *msgPtr;
+static char msg[80];
+static char *read;
+static char *write;
 
 static struct file_operations fops = {.open = huao_open,
                                       .release = huao_release,
@@ -42,6 +43,8 @@ static int __init huao_driver_init(void) {
     }
     printk(KERN_ALERT "huao_driver_init:register successful, major is %d\n",
            major);
+    read = msg;
+    write = msg;
     return 0;
 }
 
@@ -66,7 +69,7 @@ static int huao_open(struct inode *inode, struct file *file) {
     }
 
     device_open++;
-    msgPtr = msg + 80;
+    // msgPtr = msg + 80;
     // sprintf(msgPtr, "I already told you %d times Hello world\n", counter++);
     // try_module_get(THIS_MODULE);        // 干什么用的？
 
@@ -85,28 +88,41 @@ static ssize_t huao_read(struct file *filp, char *buffer, size_t length,
                          loff_t *offset) {
     int bytes_read = 0;
 
-    // printk(KERN_ALERT "huao_read start\n");
-
-    while (length && *msgPtr) {
-        put_user(*(msgPtr++), buffer++);
+    while (length) {
+        if (read == write) {
+            break;
+        }
+        put_user(*read, buffer);
         length--;
         bytes_read++;
-    }
 
+        read++;
+        buffer++;
+        if (read - msg >= 80) {
+            read -= 80;
+        }
+    }
     return bytes_read;
 }
 
 static ssize_t huao_write(struct file *filp, const char *buffer, size_t length,
                           loff_t *offset) {
     int bytes_write = 0;
-    const char *ptr_buffer = buffer + length - 1;
-    // printk(KERN_ALERT "huao_write start\n");
 
-    *msgPtr = 0;
-    while (length && (msgPtr >= msg)) {
-        get_user(*(--msgPtr), ptr_buffer--);
+    while (length) {
+        if ((write - read + 80) % 80 == 79) {
+            break;
+        }
+        get_user(*write, buffer);
         length--;
         bytes_write++;
+
+        write++;
+        buffer++;
+        if (write - msg >= 80) {
+            write -= 80;
+        }
     }
+
     return bytes_write;
 }
