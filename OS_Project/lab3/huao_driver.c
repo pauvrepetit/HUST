@@ -4,18 +4,14 @@
  * 可以实现open/close/read/write功能
  * 在linux-5.4.19上实现
  * 2019-02-16
+ *
+ * update 2019-02-24
+ * 添加信号灯，使得 可以同时有多个进程打开设备
+ * 但是只能有一个进程对设备进行读/写操作
+ * 可以添加msleep(linux/delay.h)在读/写操作中添加时延 从而测试是否实现了互斥操作
  */
 
-#include <linux/fs.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <asm/uaccess.h> // warning: 该头文件依赖于上面的某一个头文件，头文件引用顺序不能修改
-
-
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Hu Ao");
-MODULE_DESCRIPTION("This is huao_driver");
-MODULE_SUPPORTED_DEVICE("huao_device");
+#include <linux/syscalls.h>
 
 static int huao_driver_init(void);
 static void huao_driver_exit(void);
@@ -26,6 +22,7 @@ static ssize_t huao_write(struct file *, const char *, size_t, loff_t *);
 
 static int major;           // 主设备号
 static int device_open = 0; // 设备的打开状态
+static struct semaphore *sem = NULL;
 static char msg[80];
 static char *read;
 static char *write;
@@ -45,14 +42,17 @@ static int __init huao_driver_init(void) {
            major);
     read = msg;
     write = msg;
+
+    // 下面我们获取一个信号灯 用于对设备的独占使用
+    // 同时保证 同时可以有多个进程使用此设备
+    sem = (struct semaphore *)kzalloc(sizeof(struct semaphore), GFP_KERNEL);
+    sema_init(sem, 1);
     return 0;
 }
 
 static void __exit huao_driver_exit(void) {
-    // 终止模块
     unregister_chrdev(major, "huao_device");
-    // 似乎在新的linux
-    // kernel中，该函数的返回值类型改为了void(课设的指导书中说返回值是int)
+    kfree(sem); // 销毁信号灯
     return;
 }
 
@@ -63,23 +63,12 @@ module_exit(huao_driver_exit);
 // 下面是对设备的处理函数open/close/read/write
 
 static int huao_open(struct inode *inode, struct file *file) {
-    // static int counter = 0;
-    if (device_open) {
-        return -EBUSY; // EBUSY被定义为16,含义是 Device or resource busy
-    }
-
     device_open++;
-    // msgPtr = msg + 80;
-    // sprintf(msgPtr, "I already told you %d times Hello world\n", counter++);
-    // try_module_get(THIS_MODULE);        // 干什么用的？
-
     return 0;
 }
 
 static int huao_release(struct inode *inode, struct file *file) {
     device_open--;
-
-    // module_put(THIS_MODULE);    // ？？？
     return 0;
 }
 
@@ -87,8 +76,9 @@ static int huao_release(struct inode *inode, struct file *file) {
 static ssize_t huao_read(struct file *filp, char *buffer, size_t length,
                          loff_t *offset) {
     int bytes_read = 0;
-
+    down(sem);
     while (length) {
+        // msleep(1000);
         if (read == write) {
             break;
         }
@@ -102,13 +92,15 @@ static ssize_t huao_read(struct file *filp, char *buffer, size_t length,
             read -= 80;
         }
     }
+    up(sem);
     return bytes_read;
 }
 
 static ssize_t huao_write(struct file *filp, const char *buffer, size_t length,
                           loff_t *offset) {
     int bytes_write = 0;
-
+    down(sem);
+    // msleep(10000);
     while (length) {
         if ((write - read + 80) % 80 == 79) {
             break;
@@ -123,6 +115,12 @@ static ssize_t huao_write(struct file *filp, const char *buffer, size_t length,
             write -= 80;
         }
     }
+    up(sem);
 
     return bytes_write;
 }
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Hu Ao");
+MODULE_DESCRIPTION("This is huao_driver");
+MODULE_SUPPORTED_DEVICE("huao_device");
