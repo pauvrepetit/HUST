@@ -4,30 +4,31 @@
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+namespace Ui {
+class MainWindow;
+}
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
-public:
+  public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
     int setFp(FILE *);
 
-signals:
+  signals:
     void exitProgram();
 
-private slots:
+  private slots:
     void execCommand();
 
     void on_shell_textChanged();
 
     void on_writeClose();
 
-private:
+  private:
     Ui::MainWindow *ui;
     FILE *fp;
     long fileNodeOffset;

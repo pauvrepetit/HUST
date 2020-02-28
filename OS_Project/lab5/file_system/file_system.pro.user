@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.11.1, 2020-02-23T17:14:45. -->
+<!-- Written by QtCreator 4.11.1, 2020-02-28T16:46:15. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -285,8 +285,9 @@
     </valuelist>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:/home/huao/code/HUST/OS_Project/lab5/fs/file_system/file_system.pro</value>
-    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/huao/code/HUST/OS_Project/lab5/fs/file_system/file_system.pro</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">file_system2</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:/home/huao/code/HUST/OS_Project/lab5/file_system/file_system.pro</value>
+    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/huao/code/HUST/OS_Project/lab5/file_system/file_system.pro</value>
     <value type="QString" key="RunConfiguration.Arguments">&quot;huao_fs&quot;</value>
     <value type="bool" key="RunConfiguration.Arguments.multi">false</value>
     <value type="QString" key="RunConfiguration.OverrideDebuggerStartup"></value>
