@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     char *source = argv[1];
     char *target = argv[2];
 
-    if (syscall(436, source, strlen(source), target, strlen(target)) == 0) {
+    if (syscall(436, source, target) == 0) {
         printf("copy finished\n");
     } else {
         printf("copy failed\n");
