@@ -922,7 +922,7 @@ SYSCALL_DEFINE0(getuid)
 	return from_kuid_munged(current_user_ns(), current_uid());
 }
 
-SYSCALL_DEFINE4(huao_copy, const char __user *, src, int, srcLen, const char __user *, dest, int, destLen) {
+SYSCALL_DEFINE4(huao_copy, const char __user *, src, const char __user *, dest) {
 	mm_segment_t old_fs = get_fs();
 	unsigned int source, target;	// 两个文件描述符
 	char buffer[1024];				// 读写文件缓冲
