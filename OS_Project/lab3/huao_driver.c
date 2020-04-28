@@ -23,6 +23,7 @@ static ssize_t huao_write(struct file *, const char *, size_t, loff_t *);
 static int major;           // 主设备号
 static int device_open = 0; // 设备的打开状态
 static struct semaphore *sem = NULL;
+static struct semaphore *semDevice = NULL;
 static char msg[80];
 static char *read;
 static char *write;
@@ -47,12 +48,15 @@ static int __init huao_driver_init(void) {
     // 同时保证 同时可以有多个进程使用此设备
     sem = (struct semaphore *)kzalloc(sizeof(struct semaphore), GFP_KERNEL);
     sema_init(sem, 1);
+    semDevice = (struct semaphore *)kzalloc(sizeof(struct semaphore), GFP_KERNEL);
+    sema_init(semDevice, 1);
     return 0;
 }
 
 static void __exit huao_driver_exit(void) {
     unregister_chrdev(major, "huao_device");
     kfree(sem); // 销毁信号灯
+    kfree(semDevice);
     return;
 }
 
@@ -63,12 +67,18 @@ module_exit(huao_driver_exit);
 // 下面是对设备的处理函数open/close/read/write
 
 static int huao_open(struct inode *inode, struct file *file) {
+    down(semDevice);
+    try_module_get(THIS_MODULE);
     device_open++;
+    up(semDevice);
     return 0;
 }
 
 static int huao_release(struct inode *inode, struct file *file) {
+    down(semDevice);
     device_open--;
+    module_put(THIS_MODULE);
+    up(semDevice);
     return 0;
 }
 
