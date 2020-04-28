@@ -1,17 +1,10 @@
 .vscode/
 .DS_Store
-.qmake.stash
 *.o
-*.user
-moc_*
-ui_*
-Makefile
-socket
-CMakeFiles/
-cmake_install.cmake
-CMakeCache.txt
 result.txt
 input.txt
 output.txt
 linux-*.tar.xz
+linux-*-new/
+huao_fs
 
